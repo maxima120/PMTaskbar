@@ -11,4 +11,8 @@ Right click on a link to unpin it.
 
 Use your favourite method to run this on logon - Startup Menu, Task Scheduler, registry..
 
+Close this by right-click on the actual Windows 11 taksbar and "Close all windows"
+
+*Note: it is a quick solution, has not been tested with different monitors / DPI settings.*
+
 ![image](https://user-images.githubusercontent.com/10121753/136709292-9dcbb37d-d84c-4074-a126-324921b4dd33.png)
