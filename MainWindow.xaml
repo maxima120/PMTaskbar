@@ -13,10 +13,16 @@
             <RowDefinition Height="40"/>
         </Grid.RowDefinitions>
         <ListView x:Name="lst" AllowDrop="True" Background="PeachPuff" Drop="ListView_Drop" Grid.Row="0"
-                  ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="lst_MouseDoubleClick">
+                  ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
+                  MouseDoubleClick="lst_MouseDoubleClick" SelectionMode="Single">
+            <ListBox.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Unpin" Click="UnpinMenuItem_Click"></MenuItem>
+                </ContextMenu>
+            </ListBox.ContextMenu>
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel HorizontalAlignment="Center">
+                    <StackPanel HorizontalAlignment="Center" ToolTip="{Binding link}">
                         <Image Source="{Binding imgSrc}" Margin="5" />
                     </StackPanel>
                 </DataTemplate>

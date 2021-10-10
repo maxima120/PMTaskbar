@@ -220,6 +220,27 @@ namespace PMTaskbar
             this.Height += 60;
         }
 
+        private void UnpinMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            var item = lst.SelectedItem as LinkItem;
+
+            if (item == null)
+                return;
+
+            try
+            {
+                settings.Links.Remove(item.link);
+                settings.items.Remove(item);
+                settingsManager.SaveSettings(settings);
+
+                lst.Items.Remove(item);
+            }
+            catch (Exception)
+            {
+                // TODO
+            }
+        }
+
         #endregion
     }
 }
