@@ -5,18 +5,36 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:PMTaskbar"
         mc:Ignorable="d"
-        Title="" Height="450" Width="70" WindowStyle="ToolWindow" ResizeMode="NoResize" Topmost="True">
+        Title="" Height="480" Width="70" WindowStyle="ToolWindow" ResizeMode="NoResize" Topmost="True">
     <Grid>
-        <ListView x:Name="lst" AllowDrop="True" Background="PeachPuff" Drop="ListView_Drop" MouseMove="ListView_MouseMove" 
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="40"/>
+        </Grid.RowDefinitions>
+        <ListView x:Name="lst" AllowDrop="True" Background="PeachPuff" Drop="ListView_Drop" Grid.Row="0"
                   ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled" MouseDoubleClick="lst_MouseDoubleClick">
             <ListView.ItemTemplate>
                 <DataTemplate>
                     <StackPanel HorizontalAlignment="Center">
                         <Image Source="{Binding imgSrc}" Margin="5" />
-                        <!--<TextBlock Text="{Binding link}" />-->
                     </StackPanel>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
+        
+        <StackPanel Grid.Row="1" VerticalAlignment="Center">
+            <Button Background="LightGray" Click="UpButton_Click" Padding="3">
+                <Path Height="10" Width="10" Data="M 0,10 5,0 10,10 Z" Stroke="Black" StrokeThickness="0" Fill="Black" />
+            </Button>
+            <Button Background="LightGray" Click="DnButton_Click" Padding="3">
+                <Path Height="10" Width="10" Data="M 0,0 5,10 10,0 Z" Stroke="Black" StrokeThickness="0" Fill="Black" />
+            </Button>
+        </StackPanel>
+        
+        <StackPanel Grid.Row="2" VerticalAlignment="Center">
+            <TextBlock x:Name="TimeText" HorizontalAlignment="Center" FontSize="12" FontWeight="DemiBold" FontFamily="Calibri" />
+            <TextBlock x:Name="WeekdayText" HorizontalAlignment="Center" FontSize="12" FontFamily="Calibri" />
+        </StackPanel>
     </Grid>
 </Window>
