@@ -43,6 +43,9 @@ namespace PMTaskbar
             ProcessSettings(settings);
 
             StartWallClock();
+
+            var v = this.GetType().Assembly.GetName().Version.ToString();
+            Trace.WriteLine("PMT v." + v);
         }
 
         #endregion
@@ -183,12 +186,20 @@ namespace PMTaskbar
 
         private void lst_MouseDoubleClick(object sender, MouseButtonEventArgs e)
         {
-            var item = ((FrameworkElement)e.OriginalSource).DataContext as LinkItem;
+            var item = (e.OriginalSource as FrameworkElement)?.DataContext as LinkItem;
+
             if (item == null)
                 return;
 
-            // TODO : see if more needs to be done to avoid any dependency between this process and the children.
-            Process.Start(new ProcessStartInfo { FileName = item.link, UseShellExecute = true });
+            try
+            {
+                // TODO : see if more needs to be done to avoid any dependency between this process and the children.
+                Process.Start(new ProcessStartInfo { FileName = item.link, UseShellExecute = true });
+            }
+            catch (Exception)
+            {
+                // TODO
+            }
 
             lst.SelectedItem = null;
         }

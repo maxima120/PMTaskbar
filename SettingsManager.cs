@@ -24,22 +24,44 @@ namespace PMTaskbar
 
         private string GetLocalFilePath(string fileName)
         {
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            return Path.Combine(appData, fileName);
+            try
+            {
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                return Path.Combine(appData, fileName);
+            }
+            catch (Exception)
+            {
+                return fileName;
+            }
         }
 
         public T LoadSettings()
         {
-            if (File.Exists(filePath))
-                return JsonSerializer.Deserialize<T>(File.ReadAllText(filePath));
+            try
+            {
+                if (File.Exists(filePath))
+                    return JsonSerializer.Deserialize<T>(File.ReadAllText(filePath));
+            }
+            catch (Exception)
+            {
+                // TODO
+            }
 
             return new T();
         }
 
         public void SaveSettings(T settings)
         {
-            string json = JsonSerializer.Serialize(settings);
-            File.WriteAllText(filePath, json);
+            try
+            {
+                string json = JsonSerializer.Serialize(settings);
+                File.WriteAllText(filePath, json);
+
+            }
+            catch (Exception)
+            {
+                // TODO
+            }
         }
     }
 
