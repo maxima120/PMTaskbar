@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -14,6 +15,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
@@ -46,6 +48,13 @@ namespace PMTaskbar
 
             var v = this.GetType().Assembly.GetName().Version.ToString();
             Trace.WriteLine("PMT v." + v);
+
+            // Useful - extract default template without mucking with Blend
+
+            //var str = new StringBuilder();
+            //using (var writer = new StringWriter(str))
+            //    XamlWriter.Save(btn.Template, writer);
+            //Debug.Write(str);
         }
 
         #endregion
