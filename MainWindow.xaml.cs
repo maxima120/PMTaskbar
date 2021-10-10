@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Media;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -165,31 +166,57 @@ namespace PMTaskbar
         private void ListView_Drop(object sender, DragEventArgs e)
         {
             if (!e.Effects.HasFlag(DragDropEffects.Link))
+            {
+                SystemSounds.Exclamation.Play();
                 return;
+            }
 
             if (!e.Data.GetDataPresent(DataFormats.FileDrop))
+            {
+                SystemSounds.Exclamation.Play();
                 return;
+            }
 
             var data = e.Data.GetData(DataFormats.FileDrop);
 
             if (data == null)
+            {
+                SystemSounds.Exclamation.Play();
                 return;
+            }
 
             var arr = data as string[];
 
             if (arr == null || arr.Length == 0)
+            {
+                SystemSounds.Exclamation.Play();
                 return;
+            }
 
+            var playSound = false;
             for (int i = 0; i < arr.Length; i++)
             {
                 var s = arr[i] ?? "";
 
                 if (!s.EndsWith(".lnk"))
+                {
+                    playSound = true;
                     continue;
+                }
+                if (settings.Links.Contains(s))
+                {
+                    playSound = true;
+                    continue;
+                }
 
                 settings.Links.Add(s);
                 settings.items.Add(new LinkItem { imgSrc = GetIcon(s), link = s });
                 settingsManager.SaveSettings(settings);
+            }
+
+            if (playSound)
+            {
+                SystemSounds.Hand.Play();
             }
         }
 
@@ -198,7 +225,10 @@ namespace PMTaskbar
             var item = (e.OriginalSource as FrameworkElement)?.DataContext as LinkItem;
 
             if (item == null)
+            {
+                SystemSounds.Exclamation.Play();
                 return;
+            }
 
             try
             {
@@ -208,6 +238,7 @@ namespace PMTaskbar
             catch (Exception)
             {
                 // TODO
+                SystemSounds.Exclamation.Play();
             }
 
             lst.SelectedItem = null;
@@ -234,7 +265,10 @@ namespace PMTaskbar
             var item = lst.SelectedItem as LinkItem;
 
             if (item == null)
+            {
+                SystemSounds.Exclamation.Play();
                 return;
+            }
 
             try
             {
@@ -247,6 +281,7 @@ namespace PMTaskbar
             catch (Exception)
             {
                 // TODO
+                SystemSounds.Exclamation.Play();
             }
         }
 
