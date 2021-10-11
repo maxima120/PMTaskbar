@@ -44,7 +44,7 @@
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <ListView x:Name="lst" AllowDrop="True" Background="PeachPuff" Drop="ListView_Drop" Grid.Row="0" BorderThickness="0"
+        <ListView x:Name="lst" AllowDrop="True" Background="#1d2951" Drop="ListView_Drop" Grid.Row="0" BorderThickness="0"
                   ScrollViewer.VerticalScrollBarVisibility="Hidden" ScrollViewer.HorizontalScrollBarVisibility="Disabled" 
                   MouseDoubleClick="lst_MouseDoubleClick" SelectionMode="Single">
             <ListBox.ContextMenu>
