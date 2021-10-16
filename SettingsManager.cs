@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Shell32;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -93,7 +94,32 @@ namespace PMTaskbar
     /// </summary>
     public class LinkItem
     {
+        /// <summary>
+        /// .lnk icon
+        /// </summary>
         public ImageSource imgSrc { get; set; }
-        public string link { get; set; }
+        /// <summary>
+        /// path to .lnk object (eg ./dektop/my.lnk
+        /// </summary>
+        public string lnkPath { get; set; }
+        /// <summary>
+        /// COM lnk object
+        /// </summary>
+        public ShellLinkObject lnk { get; set; }
+        /// <summary>
+        /// Target of the link (eg /mypath/myapp.exe)
+        /// </summary>
+        public string lnkTarget { get; set; }
+
+        /// <summary>
+        /// running processes of that target
+        /// </summary>
+        public List<LinkProcess> processes { get; set; }
+    }
+
+    public class LinkProcess
+    {
+        public string name { get; set; }
+        public int processId { get; set; }
     }
 }

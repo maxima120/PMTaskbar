@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Management;
 using System.Media;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -20,7 +21,6 @@ using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace PMTaskbar
 {
@@ -70,15 +70,66 @@ namespace PMTaskbar
 
             foreach (var link in settings.Links)
             {
-                settings.items.Add(new LinkItem { link = link, imgSrc = GetIcon(link) });
+                settings.items.Add(CreateItem(link));
             }
 
             lst.ItemsSource = settings.items;
+
+            WatchProcesses();
         }
 
         #endregion
 
         #region pinvokes
+
+        LinkItem CreateItem(string filename)
+        {
+            // NB: needs to be run as administrator to get the properties
+
+            var sh = new Shell32.Shell();
+            var folder = sh.NameSpace(Path.GetDirectoryName(filename));
+            var folderItem = folder.Items().Item(Path.GetFileName(filename));
+            var link = (Shell32.ShellLinkObject)folderItem.GetLink;
+
+            var o = new LinkItem { lnkPath = filename, imgSrc = GetIcon(filename), lnk = link, processes = new List<LinkProcess>() };
+
+            //[17080] Target: System.__ComObject
+            //try
+            //{
+            //    Debug.WriteLine("Path: " + link.Path);
+            //}
+            //catch { }
+            //try
+            //{
+            //    Debug.WriteLine("WorkingDirectory: " + link.WorkingDirectory);
+            //}
+            //catch { }
+            //try
+            //{
+            //    Debug.WriteLine("Arguments: " + link.Arguments);
+            //}
+            //catch { }
+            //try
+            //{
+            //    Debug.WriteLine("Description: " + link.Description);
+            //}
+            //catch { }
+
+            // test link
+            try
+            {
+                Debug.WriteLine("Path: " + link.Path);
+                o.lnkTarget = link.Path;
+            }
+            catch 
+            {
+                // lnk is unusable
+                o.lnk = null;
+                o.lnkTarget = null;
+            }
+
+            return o;
+        }
 
         public ImageSource GetIcon(string fileName)
         {
@@ -210,7 +261,7 @@ namespace PMTaskbar
                 }
 
                 settings.Links.Add(s);
-                settings.items.Add(new LinkItem { imgSrc = GetIcon(s), link = s });
+                settings.items.Add(CreateItem(s));
                 settingsManager.SaveSettings(settings);
             }
 
@@ -233,7 +284,7 @@ namespace PMTaskbar
             try
             {
                 // TODO : see if more needs to be done to avoid any dependency between this process and the children.
-                Process.Start(new ProcessStartInfo { FileName = item.link, UseShellExecute = true });
+                Process.Start(new ProcessStartInfo { FileName = item.lnkPath, UseShellExecute = true });
             }
             catch (Exception)
             {
@@ -272,7 +323,7 @@ namespace PMTaskbar
 
             try
             {
-                settings.Links.Remove(item.link);
+                settings.Links.Remove(item.lnkPath);
                 settings.items.Remove(item);
                 settingsManager.SaveSettings(settings);
 
@@ -283,6 +334,104 @@ namespace PMTaskbar
                 // TODO
                 SystemSounds.Exclamation.Play();
             }
+        }
+
+        #endregion
+
+        #region process watch
+
+        // https://www.codeproject.com/Articles/12138/Process-Information-and-Notifications-using-WMI
+        // https://www.codeproject.com/Tips/44329/Edit-shortcuts-lnk-properties-with-C
+
+        void WatchProcesses()
+        {
+            Debug.WriteLine("WatchProcesses is starting.");
+
+            var sw = Stopwatch.StartNew();
+
+            // NB: WMI timing is x10 of the .NET GetProcesses
+
+            // TODO : try select with WHERE and specific names
+            //var queryString = "SELECT Name, ProcessId, ExecutablePath FROM Win32_Process";
+
+            //var searcher = new ManagementObjectSearcher(@"\\.\root\CIMV2", queryString);
+            //var processes = searcher.Get();
+
+            //foreach (var process in processes)
+            //{
+            //    var name = process["Name"].ToString();
+            //    var processId = Convert.ToInt32(process["ProcessId"]);
+            //    var executablePath = process["ExecutablePath"]?.ToString() ?? "";
+
+            //    var item = settings.items.SingleOrDefault(i => i.lnkTarget == executablePath);
+
+            //    if (item == null)
+            //        continue;
+
+            //    Debug.WriteLine("  process {0} for link {1} is running.", processId, item.lnkPath);
+            //}
+
+            //Debug.WriteLine("Processed in: {0}", sw.Elapsed);
+
+            //sw.Restart();
+            Process[] pps = Process.GetProcesses();
+
+            // NB: without stopwords - there are exceptions which make it run for 500-600ms instead of 10ms
+            var stopWords = new[] {
+                "Idle",
+                "System",
+                "Registry",
+                "smss",
+                "csrss",
+                "wininit",
+                "csrss",
+                "services",
+                "Memory Compression",
+                "MBAMService",
+                "svchost",
+                "SecurityHealthService",
+                "SgrmBroker",
+                "svchost"
+            };
+
+            foreach (var process in pps)
+            {
+                //Debug.WriteLine("{0}:{1}", process.Id, process.ProcessName);
+
+                if (stopWords.Contains(process.ProcessName))
+                    continue;
+
+                string module = null;
+                try
+                {
+                    module = process.MainModule?.FileName;
+                }
+                catch (Win32Exception)
+                {
+                    Debug.WriteLine("Win32Exception {0}:{1}", process.Id, process.ProcessName);
+                    continue;
+                }
+                catch (InvalidOperationException)
+                {
+                    Debug.WriteLine("InvalidOperationException {0}:{1}", process.Id, process.ProcessName);
+                    continue;
+                }
+                catch (Exception)
+                {
+                    Debug.WriteLine("Exception {0}:{1}", process.Id, process.ProcessName);
+                    continue;
+                }
+
+                // TODO : index by target and PID
+                var item = settings.items.SingleOrDefault(i => i.lnkTarget == module);
+
+                if (item == null)
+                    continue;
+
+                Debug.WriteLine("  process {0} for link {1} is running.", process.Id, item.lnkPath);
+            }
+
+            Debug.WriteLine("Processed in: {0}", sw.Elapsed);
         }
 
         #endregion
