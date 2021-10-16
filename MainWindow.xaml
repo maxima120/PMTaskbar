@@ -74,7 +74,7 @@
             </ListBox.ContextMenu>
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <StackPanel HorizontalAlignment="Center" ToolTip="{Binding link}">
+                    <StackPanel HorizontalAlignment="Center" ToolTip="{Binding linkPath}">
                         <Image Source="{Binding imgSrc}" Margin="5" />
                     </StackPanel>
                 </DataTemplate>

@@ -343,6 +343,9 @@ namespace PMTaskbar
         // https://www.codeproject.com/Articles/12138/Process-Information-and-Notifications-using-WMI
         // https://www.codeproject.com/Tips/44329/Edit-shortcuts-lnk-properties-with-C
 
+        // https://stackoverflow.com/questions/3556048/how-to-detect-win32-process-creation-termination-in-c/50315772#50315772
+        // https://social.msdn.microsoft.com/Forums/vstudio/en-US/1c82bfb2-7c90-4b08-b34d-e64d1b9af006/wmi-event-watcher-query-causes-high-cpu-usage-for-wmiprvseexe-and-slowdown?forum=netfxbcl
+
         void WatchProcesses()
         {
             Debug.WriteLine("WatchProcesses is starting.");
@@ -352,7 +355,7 @@ namespace PMTaskbar
             // NB: WMI timing is x10 of the .NET GetProcesses
 
             // TODO : try select with WHERE and specific names
-            //var queryString = "SELECT Name, ProcessId, ExecutablePath FROM Win32_Process";
+            //var queryString = @"SELECT Name, ProcessId, ExecutablePath FROM Win32_Process WHERE ExecutablePath = 'C:\Users\Public\Desktop\TablePlus.lnk'";
 
             //var searcher = new ManagementObjectSearcher(@"\\.\root\CIMV2", queryString);
             //var processes = searcher.Get();
@@ -374,64 +377,108 @@ namespace PMTaskbar
             //Debug.WriteLine("Processed in: {0}", sw.Elapsed);
 
             //sw.Restart();
-            Process[] pps = Process.GetProcesses();
+            //Process[] pps = Process.GetProcesses();
 
             // NB: without stopwords - there are exceptions which make it run for 500-600ms instead of 10ms
-            var stopWords = new[] {
-                "Idle",
-                "System",
-                "Registry",
-                "smss",
-                "csrss",
-                "wininit",
-                "csrss",
-                "services",
-                "Memory Compression",
-                "MBAMService",
-                "svchost",
-                "SecurityHealthService",
-                "SgrmBroker",
-                "svchost"
-            };
+            //var stopWords = new[] {
+            //    "Idle",
+            //    "System",
+            //    "Registry",
+            //    "smss",
+            //    "csrss",
+            //    "wininit",
+            //    "csrss",
+            //    "services",
+            //    "Memory Compression",
+            //    "MBAMService",
+            //    "svchost",
+            //    "SecurityHealthService",
+            //    "SgrmBroker",
+            //    "svchost"
+            //};
 
-            foreach (var process in pps)
+            var errors = 0;
+            //foreach (var process in pps)
+            //{
+            //    //Debug.WriteLine("{0}:{1}", process.Id, process.ProcessName);
+
+            //    //if (stopWords.Contains(process.ProcessName))
+            //    //    continue;
+
+            //    string module = null;
+            //    try
+            //    {
+            //        module = process.MainModule?.FileName;
+            //    }
+            //    catch (Win32Exception ex)
+            //    {
+            //        errors++;
+            //        Debug.WriteLine("Win32Exception {0}:{1}", process.Id, process.ProcessName);
+            //        continue;
+            //    }
+            //    catch (InvalidOperationException)
+            //    {
+            //        errors++;
+            //        Debug.WriteLine("InvalidOperationException {0}:{1}", process.Id, process.ProcessName);
+            //        continue;
+            //    }
+            //    catch (Exception)
+            //    {
+            //        errors++;
+            //        Debug.WriteLine("Exception {0}:{1}", process.Id, process.ProcessName);
+            //        continue;
+            //    }
+
+            //    // TODO : index by target and PID
+            //    var item = settings.items.SingleOrDefault(i => i.lnkTarget == module);
+
+            //    if (item == null)
+            //        continue;
+
+            //    Debug.WriteLine("  process {0} for link {1} is running.", process.Id, item.lnkPath);
+            //}
+
+            foreach (var item in settings.items)
             {
-                //Debug.WriteLine("{0}:{1}", process.Id, process.ProcessName);
+                var name = Path.GetFileNameWithoutExtension(item.lnkPath);
+                var processes = Process.GetProcessesByName(name);
 
-                if (stopWords.Contains(process.ProcessName))
-                    continue;
-
-                string module = null;
-                try
+                if (processes != null && processes.Length != 0)
                 {
-                    module = process.MainModule?.FileName;
-                }
-                catch (Win32Exception)
-                {
-                    Debug.WriteLine("Win32Exception {0}:{1}", process.Id, process.ProcessName);
-                    continue;
-                }
-                catch (InvalidOperationException)
-                {
-                    Debug.WriteLine("InvalidOperationException {0}:{1}", process.Id, process.ProcessName);
-                    continue;
-                }
-                catch (Exception)
-                {
-                    Debug.WriteLine("Exception {0}:{1}", process.Id, process.ProcessName);
-                    continue;
-                }
+                    foreach (var process in processes)
+                    {
+                        try
+                        {
 
-                // TODO : index by target and PID
-                var item = settings.items.SingleOrDefault(i => i.lnkTarget == module);
-
-                if (item == null)
-                    continue;
-
-                Debug.WriteLine("  process {0} for link {1} is running.", process.Id, item.lnkPath);
+                            if (item.lnkTarget == process.MainModule?.FileName)
+                            {
+                                Debug.WriteLine("  process {0} for link {1} is running.", process.Id, item.lnkPath);
+                                item.processes.Add(new LinkProcess { name = process.ProcessName, processId = process.Id });
+                            }
+                        }
+                        catch (Win32Exception ex)
+                        {
+                            errors++;
+                            //Debug.WriteLine("Win32Exception {0}:{1}", process.Id, process.ProcessName);
+                            continue;
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            errors++;
+                            Debug.WriteLine("InvalidOperationException {0}:{1}", process.Id, process.ProcessName);
+                            continue;
+                        }
+                        catch (Exception)
+                        {
+                            errors++;
+                            Debug.WriteLine("Exception {0}:{1}", process.Id, process.ProcessName);
+                            continue;
+                        }
+                    }
+                }
             }
 
-            Debug.WriteLine("Processed in: {0}", sw.Elapsed);
+            Trace.WriteLine($"Processed in: {sw.Elapsed}, errors: {errors}");
         }
 
         #endregion
