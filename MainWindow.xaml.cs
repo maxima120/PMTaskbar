@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -12,16 +13,12 @@ using System.Media;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 
 namespace PMTaskbar
 {
@@ -74,7 +71,6 @@ namespace PMTaskbar
                 settings.items.Add(CreateItem(link));
             }
 
-            Debug.WriteLine("pffff");
             //lst.ItemsSource = settings.items;
             lst.DataContext = settings;
 
@@ -97,7 +93,15 @@ namespace PMTaskbar
 
             var link = GetShortcutTarget(filename);
 
-            var o = new LinkItem { lnkPath = filename, imgSrc = GetIcon(filename), lnkTarget = link, processes = new ObservableCollection<LinkProcess>() };
+            var o = new LinkItem
+            {
+                lnkPath = filename,
+                imgSrc = GetIcon(filename),
+                lnkTarget = link,
+                processes = new ObservableCollection<LinkProcess>()
+            };
+
+            RefreshItemProcessesAsync(o);
 
             return o;
         }
@@ -347,7 +351,8 @@ namespace PMTaskbar
             try
             {
                 // TODO : see if more needs to be done to avoid any dependency between this process and the children.
-                Process.Start(new ProcessStartInfo { FileName = item.lnkPath, UseShellExecute = true });
+                Process.Start(new ProcessStartInfo { FileName = item.lnkPath, UseShellExecute = true });            
+                RefreshItemProcessesAsync(item);
             }
             catch (Exception)
             {
@@ -419,44 +424,50 @@ namespace PMTaskbar
 
             foreach (var item in settings.items)
             {
-                var name = Path.GetFileNameWithoutExtension(item.lnkPath);
-                var processes = Process.GetProcessesByName(name);
-
-                if (processes != null && processes.Length != 0)
-                {
-                    foreach (var process in processes)
-                    {
-                        try
-                        {
-                            if (item.lnkTarget == process.MainModule?.FileName)
-                            {
-                                Debug.WriteLine("  process {0} for link {1} is running.", process.Id, item.lnkPath);
-                                item.processes.Add(new LinkProcess { process = process });
-                            }
-                        }
-                        catch (Win32Exception ex)
-                        {
-                            errors++;
-                            Debug.WriteLine("Win32Exception {0}:{1}", process.Id, process.ProcessName);
-                            continue;
-                        }
-                        catch (InvalidOperationException)
-                        {
-                            errors++;
-                            Debug.WriteLine("InvalidOperationException {0}:{1}", process.Id, process.ProcessName);
-                            continue;
-                        }
-                        catch (Exception)
-                        {
-                            errors++;
-                            Debug.WriteLine("Exception {0}:{1}", process.Id, process.ProcessName);
-                            continue;
-                        }
-                    }
-                }
+                item.processes = new ObservableCollection<LinkProcess>(GetItemProcesses(item));
+                //Debug.WriteLine("  process {0} for link {1} is running.", process.Id, item.lnkPath);
             }
 
             Trace.WriteLine($"Processed in: {sw.Elapsed}, errors: {errors}");
+        }
+
+        private List<LinkProcess> GetItemProcesses(LinkItem item)
+        {
+            var name = Path.GetFileNameWithoutExtension(item.lnkTarget);
+            var processes = Process.GetProcessesByName(name);
+
+            if (processes == null || processes.Length == 0)
+                return new List<LinkProcess>();
+            
+            var result = new List<LinkProcess>();
+
+            foreach (var process in processes)
+            {
+                try
+                {
+                    if (item.lnkTarget == process.MainModule?.FileName)
+                    {
+                        result.Add(new LinkProcess(item) { process = process });
+                    }
+                }
+                catch (Win32Exception ex)
+                {
+                    Debug.WriteLine("Win32Exception {0}:{1}", process.Id, process.ProcessName);
+                    continue;
+                }
+                catch (InvalidOperationException)
+                {
+                    Debug.WriteLine("InvalidOperationException {0}:{1}", process.Id, process.ProcessName);
+                    continue;
+                }
+                catch (Exception)
+                {
+                    Debug.WriteLine("Exception {0}:{1}", process.Id, process.ProcessName);
+                    continue;
+                }
+            }
+
+            return result;
         }
 
         #endregion
@@ -471,15 +482,7 @@ namespace PMTaskbar
             if (itemMouseOver == null)
                 return;
 
-            ThreadPool.QueueUserWorkItem((o) =>
-            {
-                var item = o as LinkItem;
-                Thread.Sleep(200);
-
-                if (item == itemMouseOver && item.processes?.Count != 0)
-                    this.Dispatcher.BeginInvoke((Action<LinkItem>)((item) => item.IsPopupShow = true), item);
-            }, 
-            itemMouseOver);
+            RefreshItemProcessesAsync(itemMouseOver, true);
         }
 
         private void ListViewItem_MouseLeave(object sender, MouseEventArgs e)
@@ -501,15 +504,87 @@ namespace PMTaskbar
             item);
         }
 
-        [DllImport("user32.dll")]
-        static extern bool SetForegroundWindow(IntPtr hWnd);
 
-        public static void BringWindowToFront(Process process)
+        private void RefreshItemProcessesAsync(LinkItem item, bool showPopup = false)
+        {
+            ThreadPool.QueueUserWorkItem((o) =>
+            {
+                var data = o as Tuple<LinkItem, bool>;
+                Thread.Sleep(400);
+
+                this.Dispatcher.BeginInvoke((Action<LinkItem>)((item) => RefreshItemProcesses(data.Item1, data.Item2)), item);
+            },
+            new Tuple<LinkItem, bool> (item,showPopup));
+        }
+
+        private void RefreshItemProcesses(LinkItem item, bool showPopup)
+        {
+            var sw = Stopwatch.StartNew();
+
+            lock (item)
+            {
+                var processes = new ObservableCollection<LinkProcess>(GetItemProcesses(item));
+
+                foreach (var p in item.processes.ToList())
+                {
+                    if (!processes.Contains(p))
+                        item.processes.Remove(p);
+                }
+                foreach (var p in processes.ToList())
+                {
+                    if (!item.processes.Contains(p))
+                        item.processes.Add(p);
+                }
+
+                if (showPopup && item.processes.Count != 0)
+                    item.IsPopupShow = true;
+            }
+
+            sw.Stop();
+            Debug.WriteLine("Refresh Item: {0}", sw.Elapsed);
+        }
+
+        public void BringWindowToFront(Process process)
         {
             try
             {
                 IntPtr handle = process.MainWindowHandle;
-                SetForegroundWindow(handle);
+
+                Debug.WriteLine("Main handle: pid {0} window {1}", process.Id, handle);
+
+                //SetForegroundWindow(handle);
+                //ShowWindowAsync(handle, (int)SHOWWINDOW.RESTORE);
+
+                //return;
+
+                // How to find which window is real:
+                // https://stackoverflow.com/questions/7277366/why-does-enumwindows-return-more-windows-than-i-expected
+
+                //var children = WindowEnumerator.GetChildWindows(handle);
+                //var windows = WindowEnumerator.GetDesktopWindows();
+                var windows = WindowEnumerator.GetWindows();
+
+                for (int i = 0; i < windows.Count; i++)
+                {
+                    var w = (IntPtr)windows[i];
+
+                    uint pid;
+                    WindowEnumerator.GetWindowThreadProcessId(w, out pid);
+
+                    if (process.Id == pid)
+                    {
+                        var v = WindowEnumerator.IsWindowVisible(w);
+
+                        Debug.WriteLine("bingo: pid {0} window {1}, visible {2}", pid, w, v);
+
+                        if (v)
+                        {
+                            WindowEnumerator.SetForegroundWindow(w);
+                            //Thread.Sleep(500);
+                            //ShowWindowAsync(w, (int)SHOWWINDOW.RESTORE);
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -520,10 +595,23 @@ namespace PMTaskbar
         {
             var item = (sender as Button).DataContext as LinkProcess;
 
-            if (item == null)
+            if (item == null || item.process == null)
                 return;
 
             BringWindowToFront(item.process);
+        }
+
+        private void CloseProcessButton_Click(object sender, RoutedEventArgs e)
+        {
+            var item = (sender as Button).DataContext as LinkProcess;
+
+            if (item == null || item.process == null)
+                return;
+
+            item.process.CloseMainWindow();
+
+            RefreshItemProcessesAsync(item.parent);
+
         }
 
         #endregion

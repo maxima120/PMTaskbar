@@ -95,6 +95,10 @@ namespace PMTaskbar
     /// </summary>
     public class LinkItem : INotifyPropertyChanged
     {
+        public LinkItem()
+        {
+            isPopupShow = false;
+        }
 
         /// <summary>
         /// .lnk icon
@@ -131,8 +135,12 @@ namespace PMTaskbar
 
     public class LinkProcess
     {
-        public string name { get; set; }
-        public int processId { get; set; }
+        public LinkProcess(LinkItem parent)
+        {
+            this.parent = parent;
+        }
+
         public Process process { get; set; }
+        public LinkItem parent { get; set; }
     }
 }

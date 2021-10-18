@@ -274,38 +274,43 @@
                 <DataTemplate>
                     <StackPanel HorizontalAlignment="Center">
                         <Image Source="{Binding imgSrc}" Margin="5" />
-                        <Popup PlacementTarget="{Binding}" Placement="Right" IsOpen="{Binding IsPopupShow}" Margin="50,0,0,0">
-                            <ListBox ItemsSource="{Binding processes}" SelectionMode="Single">
+                        <Popup PlacementTarget="{Binding}" Placement="Right" IsOpen="{Binding IsPopupShow}">
+                            <ListView ItemsSource="{Binding processes}" SelectionMode="Single" Background="DimGray" BorderThickness="1" BorderBrush="Black" HorizontalContentAlignment="Stretch">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
-                                        <Button Height="30" HorizontalAlignment="Stretch" Click="ProcessButton_Click" Padding="-5" Margin="-5">
-                                            <Button.Style>
-                                                <Style TargetType="Button">
-                                                    <Setter Property="Background" Value="Transparent" />
-                                                    <Setter Property="Foreground" Value="White" />
-                                                    <Setter Property="BorderThickness" Value="0" />
-                                                </Style>
-                                            </Button.Style>
-                                            <Border Height="33" Background="DimGray" CornerRadius="4" Margin="-7" Padding="20,0" ClipToBounds="False">
-                                                <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center">
-                                                    <TextBlock.Text>
-                                                        <MultiBinding StringFormat="{}{0} : {1}">
-                                                            <Binding Path="process.Id" />
-                                                            <Binding Path="process.ProcessName" />
-                                                        </MultiBinding>
-                                                    </TextBlock.Text>
-                                                </TextBlock>
-                                            </Border>
-                                        </Button>
+                                        <Border Background="DimGray" CornerRadius="4" ClipToBounds="False">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                
+                                                <Button Height="33" HorizontalAlignment="Stretch" Click="ProcessButton_Click" Padding="20,0" Foreground="White" Background="Transparent" BorderThickness="0">
+                                                    <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center">
+                                                        <TextBlock.Text>
+                                                            <MultiBinding StringFormat="{}{0} : {1}">
+                                                                <Binding Path="process.Id" />
+                                                                <Binding Path="process.ProcessName" />
+                                                            </MultiBinding>
+                                                        </TextBlock.Text>
+                                                    </TextBlock>
+                                                </Button>
+
+                                                <Button Width="30" Click="CloseProcessButton_Click" Grid.Column="1" Margin="2,2,-2,2">
+                                                    <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="White" />
+                                                </Button>
+
+                                            </Grid>
+                                        </Border>
                                     </DataTemplate>
                                 </ListBox.ItemTemplate>
-                            </ListBox>
+                            </ListView>
                         </Popup>
                     </StackPanel>
                 </DataTemplate>
             </ListView.ItemTemplate>
         </ListView>
-        
+
         <StackPanel Orientation="Horizontal" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,3,0,0">
             <Button Click="UpButton_Click" Padding="5,4" Margin="1">
                 <Path Height="10" Width="10" Data="M 0,10 5,0 10,10 Z" StrokeThickness="0" Fill="White" Margin="0,0,0,1" />
