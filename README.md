@@ -15,4 +15,4 @@ Close this by right-click on the actual Windows 11 taksbar and "Close all window
 
 *Note: it is a quick solution, has not been tested with different monitors / DPI settings.*
 
-![image](https://user-images.githubusercontent.com/10121753/136709292-9dcbb37d-d84c-4074-a126-324921b4dd33.png)
+![image](https://user-images.githubusercontent.com/10121753/137787044-35910c02-9393-4d58-a343-ecabe9d83754.png)
