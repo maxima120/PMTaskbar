@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -92,8 +93,9 @@ namespace PMTaskbar
     /// <summary>
     /// UI data item
     /// </summary>
-    public class LinkItem
+    public class LinkItem : INotifyPropertyChanged
     {
+
         /// <summary>
         /// .lnk icon
         /// </summary>
@@ -102,24 +104,35 @@ namespace PMTaskbar
         /// path to .lnk object (eg ./dektop/my.lnk
         /// </summary>
         public string lnkPath { get; set; }
-        /// <summary>
-        /// COM lnk object
-        /// </summary>
-        public ShellLinkObject lnk { get; set; }
+        ///// <summary>
+        ///// COM lnk object
+        ///// </summary>
+        //public ShellLinkObject lnk { get; set; }
         /// <summary>
         /// Target of the link (eg /mypath/myapp.exe)
         /// </summary>
         public string lnkTarget { get; set; }
 
+        private bool isPopupShow;
+        public bool IsPopupShow { get => isPopupShow; set { isPopupShow = value; OnPropertyChanged("IsPopupShow"); } }
+
         /// <summary>
         /// running processes of that target
         /// </summary>
-        public List<LinkProcess> processes { get; set; }
+        public ObservableCollection<LinkProcess> processes { get; set; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        void OnPropertyChanged(string name)
+        {
+            if (PropertyChanged != null)
+                PropertyChanged(this, new PropertyChangedEventArgs(name));
+        }
     }
 
     public class LinkProcess
     {
         public string name { get; set; }
         public int processId { get; set; }
+        public Process process { get; set; }
     }
 }
