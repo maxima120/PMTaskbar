@@ -22,7 +22,7 @@ namespace PMTaskbar
         public SettingsManager(string fileName)
         {
             filePath = GetLocalFilePath(fileName);
-            Trace.WriteLine(filePath);
+            Trace.WriteLine($"PMT. Settings: {filePath}");
         }
 
         private string GetLocalFilePath(string fileName)

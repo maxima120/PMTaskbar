@@ -67,7 +67,7 @@ namespace PMTaskbar
                 settings.Items.Add(CreateItem(link, windows));
             }
 
-            Trace.WriteLine($"Init links processed in: {sw.Elapsed}");
+            Trace.WriteLine($"PMT. Init links processed in: {sw.Elapsed}");
 
             this.DataContext = settings;
         }
@@ -288,13 +288,12 @@ namespace PMTaskbar
 
             try
             {
-                // TODO : see if more needs to be done to avoid any dependency between this process and the children.
                 Process.Start(new ProcessStartInfo { FileName = item.LnkPath, UseShellExecute = true });            
                 RefreshItemWindowsAsync(item);
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"Process start exception: {ex}");
+                Trace.WriteLine($"PMT. Process start exception: {ex}");
                 SystemSounds.Exclamation.Play();
             }
 
@@ -335,9 +334,9 @@ namespace PMTaskbar
 
                 lst.Items.Remove(item);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO
+                Trace.WriteLine($"PMT. Unpin exception: {ex}");
                 SystemSounds.Exclamation.Play();
             }
         }
@@ -378,7 +377,7 @@ namespace PMTaskbar
             if (processes == null || processes.Length == 0)
                 return result;
 
-            // TODO: can you make it faster? (init links runs for 180ms and individual links for 5-45ms)
+            // TODO: can you make it faster? (init links runs for 140ms and individual links for 5-50ms)
 
             if (windows == null)
                 windows = PInvoker.GetTaskBarWindows();
@@ -391,7 +390,7 @@ namespace PMTaskbar
                 {
                     // TODO: this presumably filters out similar processes started from another source (not LNK)
                     //       but not sure I need it
-                    if (item.LnkTarget == process.MainModule?.FileName)
+                    //if (item.LnkTarget == process.MainModule?.FileName)
                     {
                         foreach (var w in wp.Where(i => i.Value == process.Id))
                         {
@@ -493,7 +492,7 @@ namespace PMTaskbar
             }
 
             sw.Stop();
-            Debug.WriteLine("Refresh Item: {0}", sw.Elapsed);
+            Debug.WriteLine($"Refresh Item: {sw.Elapsed}");
         }
 
         private void WindowRestoreButton_Click(object sender, RoutedEventArgs e)
@@ -523,98 +522,3 @@ namespace PMTaskbar
         #endregion
     }
 }
-
-// NB: needs to be run as administrator to get the properties
-// Apparently drag drop stops working if ran as administrator.. pfff
-
-//var sh = new Shell32.Shell();
-//var folder = sh.NameSpace(Path.GetDirectoryName(filename));
-//var folderItem = folder.Items().Item(Path.GetFileName(filename));
-//var link = (Shell32.ShellLinkObject)folderItem.GetLink;
-
-
-// NB: WMI timing is x10 of the .NET GetProcesses
-
-// TODO : try select with WHERE and specific names
-//var queryString = @"SELECT Name, ProcessId, ExecutablePath FROM Win32_Process WHERE ExecutablePath = 'C:\Users\Public\Desktop\TablePlus.lnk'";
-
-//var searcher = new ManagementObjectSearcher(@"\\.\root\CIMV2", queryString);
-//var processes = searcher.Get();
-
-//foreach (var process in processes)
-//{
-//    var name = process["Name"].ToString();
-//    var processId = Convert.ToInt32(process["ProcessId"]);
-//    var executablePath = process["ExecutablePath"]?.ToString() ?? "";
-
-//    var item = settings.items.SingleOrDefault(i => i.lnkTarget == executablePath);
-
-//    if (item == null)
-//        continue;
-
-//    Debug.WriteLine("  process {0} for link {1} is running.", processId, item.lnkPath);
-//}
-
-//Debug.WriteLine("Processed in: {0}", sw.Elapsed);
-
-//sw.Restart();
-//Process[] pps = Process.GetProcesses();
-
-// NB: without stopwords - there are exceptions which make it run for 500-600ms instead of 10ms
-//var stopWords = new[] {
-//    "Idle",
-//    "System",
-//    "Registry",
-//    "smss",
-//    "csrss",
-//    "wininit",
-//    "csrss",
-//    "services",
-//    "Memory Compression",
-//    "MBAMService",
-//    "svchost",
-//    "SecurityHealthService",
-//    "SgrmBroker",
-//    "svchost"
-//};
-
-//foreach (var process in pps)
-//{
-//    //Debug.WriteLine("{0}:{1}", process.Id, process.ProcessName);
-
-//    //if (stopWords.Contains(process.ProcessName))
-//    //    continue;
-
-//    string module = null;
-//    try
-//    {
-//        module = process.MainModule?.FileName;
-//    }
-//    catch (Win32Exception ex)
-//    {
-//        errors++;
-//        Debug.WriteLine("Win32Exception {0}:{1}", process.Id, process.ProcessName);
-//        continue;
-//    }
-//    catch (InvalidOperationException)
-//    {
-//        errors++;
-//        Debug.WriteLine("InvalidOperationException {0}:{1}", process.Id, process.ProcessName);
-//        continue;
-//    }
-//    catch (Exception)
-//    {
-//        errors++;
-//        Debug.WriteLine("Exception {0}:{1}", process.Id, process.ProcessName);
-//        continue;
-//    }
-
-//    // TODO : index by target and PID
-//    var item = settings.items.SingleOrDefault(i => i.lnkTarget == module);
-
-//    if (item == null)
-//        continue;
-
-//    Debug.WriteLine("  process {0} for link {1} is running.", process.Id, item.lnkPath);
-//}
-
