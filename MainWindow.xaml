@@ -274,7 +274,7 @@
                 <DataTemplate>
                     <StackPanel HorizontalAlignment="Center">
                         <Image Source="{Binding imgSrc}" Margin="5" />
-                        <Popup PlacementTarget="{Binding}" Placement="Right" IsOpen="{Binding IsPopupShow}">
+                        <Popup PlacementTarget="{Binding .}" Placement="Right" IsOpen="{Binding IsPopupShow}">
                             <ListView ItemsSource="{Binding processes}" SelectionMode="Single" Background="DimGray" BorderThickness="1" BorderBrush="Black" HorizontalContentAlignment="Stretch">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>

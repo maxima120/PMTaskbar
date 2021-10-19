@@ -507,14 +507,14 @@ namespace PMTaskbar
 
         private void RefreshItemProcessesAsync(LinkItem item, bool showPopup = false)
         {
-            ThreadPool.QueueUserWorkItem((o) =>
+            ThreadPool.QueueUserWorkItem(data =>
             {
-                var data = o as Tuple<LinkItem, bool>;
                 Thread.Sleep(400);
 
-                this.Dispatcher.BeginInvoke((Action<LinkItem>)((item) => RefreshItemProcesses(data.Item1, data.Item2)), item);
+                this.Dispatcher.BeginInvoke((Action<LinkItem>)((item) => RefreshItemProcesses(data.item, data.flag)), item);
             },
-            new Tuple<LinkItem, bool> (item,showPopup));
+            (item: item, flag: showPopup), 
+            false);
         }
 
         private void RefreshItemProcesses(LinkItem item, bool showPopup)
@@ -524,6 +524,23 @@ namespace PMTaskbar
             lock (item)
             {
                 var processes = new ObservableCollection<LinkProcess>(GetItemProcesses(item));
+
+                // TODO: brute-froce, optimise?
+
+                var windows = WindowEnumerator.GetTaskBarWindows();
+                var wp = windows.ToDictionary(k => k, v => (int)WindowEnumerator.GetWindowThreadProcessId(v));
+
+                Debug.WriteLine("Item {0}, count {1}", item.lnkTarget, processes.Count);
+
+                foreach (var p in processes.ToList())
+                {
+                    if (!wp.ContainsValue(p.process.Id))
+                        processes.Remove(p);
+                }
+
+                Debug.WriteLine("  after {0}", processes.Count);
+
+                //
 
                 foreach (var p in item.processes.ToList())
                 {
@@ -562,22 +579,23 @@ namespace PMTaskbar
 
                 //var children = WindowEnumerator.GetChildWindows(handle);
                 //var windows = WindowEnumerator.GetDesktopWindows();
-                var windows = WindowEnumerator.GetWindows();
+                var windows = WindowEnumerator.GetTaskBarWindows();
 
                 for (int i = 0; i < windows.Count; i++)
                 {
-                    var w = (IntPtr)windows[i];
+                    var w = windows[i];
 
                     uint pid;
                     WindowEnumerator.GetWindowThreadProcessId(w, out pid);
 
                     if (process.Id == pid)
                     {
-                        var v = WindowEnumerator.IsWindowVisible(w);
+                        //var v = WindowEnumerator.IsWindowVisible(w);
+                        //var v = WindowEnumerator.IsTaskBarWindow(w);
 
-                        Debug.WriteLine("bingo: pid {0} window {1}, visible {2}", pid, w, v);
+                        //Debug.WriteLine("bingo: pid {0} window {1}, visible {2}", pid, w, v);
 
-                        if (v)
+                        //if (v)
                         {
                             WindowEnumerator.SetForegroundWindow(w);
                             //Thread.Sleep(500);
