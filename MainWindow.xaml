@@ -143,10 +143,10 @@
         </ListView>
 
         <StackPanel Orientation="Horizontal" Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center" Margin="0,3,0,0">
-            <Button Click="UpButton_Click" Padding="5,4" Margin="1">
+            <Button Click="UpButton_Click" Padding="5,4" Margin="1" Background="#3d3d3d">
                 <Path Height="10" Width="10" Data="M 0,10 5,0 10,10 Z" StrokeThickness="0" Fill="White" Margin="0,0,0,1" />
             </Button>
-            <Button Click="DnButton_Click" Padding="5,4" Margin="1">
+            <Button Click="DnButton_Click" Padding="5,4" Margin="1" Background="#3d3d3d">
                 <Path Height="10" Width="10" Data="M 0,0 5,10 10,0 Z" StrokeThickness="0" Fill="White" Margin="0,2,0,0" />
             </Button>
         </StackPanel>

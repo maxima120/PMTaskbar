@@ -8,10 +8,10 @@
              d:DesignHeight="80" d:DesignWidth="80" FontFamily="SegoeUI Variable" FontWeight="DemiBold" FontSize="12">
 
     <StackPanel>
-        <TextBlock x:Name="TimeText" HorizontalAlignment="Center" MouseLeftButtonDown="TimeText_MouseLeftButtonDown" />
-        <Border x:Name="DateBorder" Padding="0,4" Background="Gainsboro" Visibility="Collapsed" MouseLeftButtonDown="DateText_MouseLeftButtonDown">
-            <TextBlock x:Name="DateText" HorizontalAlignment="Center"/>
+        <TextBlock x:Name="TimeText" HorizontalAlignment="Center" MouseLeftButtonDown="TimeText_MouseLeftButtonDown" Margin="0,0,0,2" />
+        <Border x:Name="DateBorder" Padding="0,4" Background="#3d3d3d" Visibility="Collapsed" MouseLeftButtonDown="DateText_MouseLeftButtonDown">
+            <TextBlock x:Name="DateText" Foreground="White" HorizontalAlignment="Center"/>
         </Border>
-        <TextBlock x:Name="WeekdayText" HorizontalAlignment="Center" MouseLeftButtonDown="DateText_MouseLeftButtonDown"/>
+        <TextBlock x:Name="WeekdayText" HorizontalAlignment="Center" MouseLeftButtonDown="DateText_MouseLeftButtonDown" Margin="0,2,0,0"/>
     </StackPanel>
 </UserControl>
