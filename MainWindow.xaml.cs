@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Markup;
 using System.Windows.Media;
@@ -67,13 +68,37 @@ namespace PMTaskbar
 
             foreach (var link in settings.Links)
             {
-                settings.items.Add(CreateItem(link, windows));
+                settings.Items.Add(CreateItem(link, windows));
             }
 
             Trace.WriteLine($"Init links processed in: {sw.Elapsed}");
 
             lst.DataContext = settings;
         }
+
+        #endregion
+
+        #region dep prop
+
+        protected override void OnLocationChanged(EventArgs e)
+        {
+            var currentScreenWidth = SystemParameters.WorkArea.Width;
+
+            // NB: watch the magic numbers :)
+            PopupPlacement = currentScreenWidth - this.Left - this.Width - 80 - 20 <= 0 ? PlacementMode.Left : PlacementMode.Right;
+
+            base.OnLocationChanged(e);
+        }
+
+        public PlacementMode PopupPlacement
+        {
+            get { return (PlacementMode)GetValue(PopupPlacementProperty); }
+            set { SetValue(PopupPlacementProperty, value); }
+        }
+
+        // Using a DependencyProperty as the backing store for PopupPlacement.  This enables animation, styling, binding, etc...
+        public static readonly DependencyProperty PopupPlacementProperty =
+            DependencyProperty.Register("PopupPlacement", typeof(PlacementMode), typeof(MainWindow), new PropertyMetadata(PlacementMode.Right));
 
         #endregion
 
@@ -194,28 +219,6 @@ namespace PMTaskbar
             base.OnSourceInitialized(e);
         }
 
-        public ImageSource GetIcon(string fileName)
-        {
-            try
-            {
-                Icon icon = System.Drawing.Icon.ExtractAssociatedIcon(fileName);
-
-                var imgSrc =
-
-                    System.Windows.Interop.Imaging.CreateBitmapSourceFromHIcon(
-                            icon.Handle,
-                            new Int32Rect(0, 0, icon.Width, icon.Height),
-                            BitmapSizeOptions.FromEmptyOptions());
-
-                return imgSrc;
-
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-
         #endregion
 
         #region timer
@@ -289,7 +292,7 @@ namespace PMTaskbar
                 }
 
                 settings.Links.Add(s);
-                settings.items.Add(CreateItem(s));
+                settings.Items.Add(CreateItem(s));
                 settingsManager.SaveSettings(settings);
             }
 
@@ -312,7 +315,7 @@ namespace PMTaskbar
             try
             {
                 // TODO : see if more needs to be done to avoid any dependency between this process and the children.
-                Process.Start(new ProcessStartInfo { FileName = item.lnkPath, UseShellExecute = true });            
+                Process.Start(new ProcessStartInfo { FileName = item.LnkPath, UseShellExecute = true });            
                 RefreshItemWindowsAsync(item);
             }
             catch (Exception ex)
@@ -352,8 +355,8 @@ namespace PMTaskbar
 
             try
             {
-                settings.Links.Remove(item.lnkPath);
-                settings.items.Remove(item);
+                settings.Links.Remove(item.LnkPath);
+                settings.Items.Remove(item);
                 settingsManager.SaveSettings(settings);
 
                 lst.Items.Remove(item);
@@ -381,20 +384,20 @@ namespace PMTaskbar
 
             var item = new LinkItem
             {
-                lnkPath = filename,
-                imgSrc = GetIcon(filename),
-                lnkTarget = link,
-                name = Path.GetFileNameWithoutExtension(link),
+                LnkPath = filename,
+                IconImg = PInvoker.GetIcon(filename),
+                LnkTarget = link,
+                Name = Path.GetFileNameWithoutExtension(link),
             };
 
-            item.windows = new ObservableCollection<LinkWindow>(GetItemWindows(item, windows));
+            item.Windows = new ObservableCollection<LinkWindow>(GetItemWindows(item, windows));
 
             return item;
         }
 
         private List<LinkWindow> GetItemWindows(LinkItem item, List<IntPtr> windows = null)
         {
-            var processes = Process.GetProcessesByName(item.name);
+            var processes = Process.GetProcessesByName(item.Name);
 
             var result = new List<LinkWindow>();
 
@@ -414,10 +417,12 @@ namespace PMTaskbar
                 {
                     // TODO: this presumably filters out similar processes started from another source (not LNK)
                     //       but not sure I need it
-                    if (item.lnkTarget == process.MainModule?.FileName)
+                    if (item.LnkTarget == process.MainModule?.FileName)
                     {
                         foreach (var w in wp.Where(i => i.Value == process.Id))
-                            result.Add(new LinkWindow(item) { process = process, window = w.Key });
+                        {
+                            result.Add(new LinkWindow(item) { Process = process, Window = w.Key });
+                        }
                     }
                 }
                 catch (Win32Exception ex)
@@ -494,18 +499,21 @@ namespace PMTaskbar
             {
                 var itemWindows = GetItemWindows(item, windows);
 
-                foreach (var p in item.windows.ToList())
+                foreach (var w in item.Windows.ToList())
                 {
-                    if (!itemWindows.Contains(p))
-                        item.windows.Remove(p);
+                    if (!itemWindows.Contains(w))
+                        item.Windows.Remove(w);
                 }
-                foreach (var p in itemWindows.ToList())
+                foreach (var w in itemWindows.ToList())
                 {
-                    if (!item.windows.Contains(p))
-                        item.windows.Add(p);
+                    if (!item.Windows.Contains(w))
+                    {
+                        w.ImgSrc = PInvoker.GetWindowThumb(w.Window, 80, 80);
+                        item.Windows.Add(w);
+                    }
                 }
 
-                if (showPopup && item.windows.Count != 0)
+                if (showPopup && item.Windows.Count != 0)
                     item.IsPopupShow = true;
             }
 
@@ -517,24 +525,24 @@ namespace PMTaskbar
         {
             var item = (sender as Button).DataContext as LinkWindow;
 
-            if (item == null || item.window == IntPtr.Zero)
+            if (item == null || item.Window == IntPtr.Zero)
                 return;
 
-            PInvoker.SetForegroundWindow(item.window);
+            PInvoker.SetForegroundWindow(item.Window);
         }
 
         private void WindowCloseButton_Click(object sender, RoutedEventArgs e)
         {
             var item = (sender as Button).DataContext as LinkWindow;
 
-            if (item == null || item.window == IntPtr.Zero)
+            if (item == null || item.Window == IntPtr.Zero)
                 return;
 
             //item.process.CloseMainWindow();
             //var b = WindowEnumerator.DestroyWindow(item.window);
-            var b = PInvoker.PostMessage(item.window, (uint)PInvoker.WM.CLOSE, 0, 0);
+            var b = PInvoker.PostMessage(item.Window, (uint)PInvoker.WM.CLOSE, 0, 0);
 
-            RefreshItemWindowsAsync(item.parent);
+            RefreshItemWindowsAsync(item.Parent);
         }
 
         #endregion

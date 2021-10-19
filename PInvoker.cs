@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
@@ -12,6 +14,8 @@ namespace PMTaskbar
 {
     public static class PInvoker
     {
+        #region constants
+
         // http://www.pinvoke.net/default.aspx/Constants.WM
 
         static readonly ulong STATE_SYSTEM_INVISIBLE = 0x00008000;
@@ -26,6 +30,7 @@ namespace PMTaskbar
         static readonly int GWL_ID = -12;
         
         public static readonly uint WS_SYSMENU = 0x80000;
+        public static readonly uint PW_RENDERFULLCONTENT = 0x00000002;
 
         /// <summary>
         /// Windows Messages
@@ -1071,6 +1076,7 @@ namespace PMTaskbar
             long bottom;
         }
 
+
         [StructLayout(LayoutKind.Sequential)]
         struct TITLEBARINFO
         {
@@ -1083,7 +1089,9 @@ namespace PMTaskbar
 
         public delegate bool EnumWindowProc(IntPtr hWnd, IntPtr parameter);
 
-        //
+        #endregion
+
+        #region pinvoke
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
@@ -1136,7 +1144,90 @@ namespace PMTaskbar
         [DllImport("user32.Dll")]
         public static extern int PostMessage(IntPtr hWnd, UInt32 msg, int wParam, int lParam);
 
-        //
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool PrintWindow(IntPtr hwnd, IntPtr hDC, uint nFlags);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetWindowRect(IntPtr handle, ref Rectangle rect);
+
+        [DllImport("gdi32.dll")]
+        private static extern bool DeleteObject(IntPtr hObject);
+
+        #endregion
+
+        #region helper methods
+
+        public static ImageSource GetIcon(string fileName)
+        {
+            try
+            {
+                Icon icon = Icon.ExtractAssociatedIcon(fileName);
+
+                var imgSrc =
+
+                    Imaging.CreateBitmapSourceFromHIcon(
+                            icon.Handle,
+                            new Int32Rect(0, 0, icon.Width, icon.Height),
+                            BitmapSizeOptions.FromEmptyOptions());
+
+                return imgSrc;
+
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }
+
+        public static BitmapSource GetWindowThumb(IntPtr hwnd, int height, int width)
+        {
+            Rectangle rect = new Rectangle();
+            GetWindowRect(hwnd, ref rect);
+            rect.Width = rect.Width - rect.X;
+            rect.Height = rect.Height - rect.Y;
+
+            Graphics g = null;
+            IntPtr hbitmap = IntPtr.Zero;
+            try
+            {
+                Bitmap bmp = new Bitmap(rect.Width, rect.Height);
+                g = Graphics.FromImage(bmp);
+                IntPtr hdc = g.GetHdc();
+                PrintWindow(hwnd, hdc, PW_RENDERFULLCONTENT); // PW_RENDERFULLCONTENT
+                g.ReleaseHdc(hdc);
+
+                hbitmap = bmp.GetHbitmap();
+
+                var src = Imaging.CreateBitmapSourceFromHBitmap(
+                    hbitmap, IntPtr.Zero, Int32Rect.Empty,
+                    BitmapSizeOptions.FromEmptyOptions());
+
+                double scale = 1.0;
+                if (src.PixelWidth < src.PixelHeight)
+                {
+                    scale = (double)height / src.PixelHeight;
+                }
+                else
+                {
+                    scale = (double)width / src.PixelWidth;
+                }
+
+                src = new TransformedBitmap(src, new ScaleTransform(scale, scale));
+
+                return src;
+
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+            finally
+            {
+                if(hbitmap != IntPtr.Zero)
+                    DeleteObject(hbitmap);
+            }
+        }
 
         public static uint GetWindowThreadProcessId(IntPtr hWnd)
         {
@@ -1243,6 +1334,7 @@ namespace PMTaskbar
 
             return true;
         }
-    }
 
+        #endregion
+    }
 }

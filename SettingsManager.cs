@@ -11,6 +11,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace PMTaskbar
 {
@@ -74,7 +75,7 @@ namespace PMTaskbar
     {
         public UserSettings()
         {
-            items = new ObservableCollection<LinkItem>();
+            Items = new ObservableCollection<LinkItem>();
             Links = new List<string>();
             Top = 10;
             Left = 10;
@@ -82,7 +83,7 @@ namespace PMTaskbar
         }
 
         [JsonIgnore]
-        public ObservableCollection<LinkItem> items { get; set; }
+        public ObservableCollection<LinkItem> Items { get; set; }
 
         public List<string> Links { get; set; }
         public double Top { get; set; }
@@ -100,16 +101,16 @@ namespace PMTaskbar
             isPopupShow = false;
         }
 
-        public string name { get; set; }
+        public string Name { get; set; }
 
         /// <summary>
         /// .lnk icon
         /// </summary>
-        public ImageSource imgSrc { get; set; }
+        public ImageSource IconImg { get; set; }
         /// <summary>
         /// path to .lnk object (eg ./dektop/my.lnk
         /// </summary>
-        public string lnkPath { get; set; }
+        public string LnkPath { get; set; }
         ///// <summary>
         ///// COM lnk object
         ///// </summary>
@@ -117,7 +118,7 @@ namespace PMTaskbar
         /// <summary>
         /// Target of the link (eg /mypath/myapp.exe)
         /// </summary>
-        public string lnkTarget { get; set; }
+        public string LnkTarget { get; set; }
 
         private bool isPopupShow;
         public bool IsPopupShow { get => isPopupShow; set { isPopupShow = value; OnPropertyChanged("IsPopupShow"); } }
@@ -125,7 +126,7 @@ namespace PMTaskbar
         /// <summary>
         /// running processes of that target
         /// </summary>
-        public ObservableCollection<LinkWindow> windows { get; set; }
+        public ObservableCollection<LinkWindow> Windows { get; set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
         void OnPropertyChanged(string name)
@@ -135,15 +136,25 @@ namespace PMTaskbar
         }
     }
 
-    public class LinkWindow
+    public class LinkWindow : INotifyPropertyChanged
     {
         public LinkWindow(LinkItem parent)
         {
-            this.parent = parent;
+            Parent = parent;
         }
         
-        public IntPtr window { get; set; }
-        public Process process { get; set; }
-        public LinkItem parent { get; set; }
+        public IntPtr Window { get; set; }
+        public Process Process { get; set; }
+        public LinkItem Parent { get; set; }
+
+        private BitmapSource imgSrc;
+        public BitmapSource ImgSrc { get => imgSrc; set { if (imgSrc == value) return; imgSrc = value; OnPropertyChanged("ImgSrc"); } }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+        void OnPropertyChanged(string name)
+        {
+            if (PropertyChanged != null)
+                PropertyChanged(this, new PropertyChangedEventArgs(name));
+        }
     }
 }
