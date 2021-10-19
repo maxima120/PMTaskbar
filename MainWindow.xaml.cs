@@ -22,9 +22,6 @@ using System.Windows.Media.Imaging;
 
 namespace PMTaskbar
 {
-    /// <summary>
-    /// Interaction logic for MainWindow.xaml
-    /// </summary>
     public partial class MainWindow : Window
     {
         #region ctor and fields
@@ -56,55 +53,31 @@ namespace PMTaskbar
             //Debug.Write(str);
         }
 
-        #endregion
-
-        #region settings
-
         private void ProcessSettings(UserSettings settings)
         {
             this.Top = settings.Top;
             this.Left = settings.Left;
             this.Height = settings.Height;
 
+            Debug.WriteLine("Init links is starting.");
+
+            var sw = Stopwatch.StartNew();
+
+            var windows = PInvoker.GetTaskBarWindows();
+
             foreach (var link in settings.Links)
             {
-                settings.items.Add(CreateItem(link));
+                settings.items.Add(CreateItem(link, windows));
             }
 
-            //lst.ItemsSource = settings.items;
-            lst.DataContext = settings;
+            Trace.WriteLine($"Init links processed in: {sw.Elapsed}");
 
-            WatchProcesses();
+            lst.DataContext = settings;
         }
 
         #endregion
 
-        #region pinvokes and lnk hack
-
-        LinkItem CreateItem(string filename)
-        {
-            // NB: needs to be run as administrator to get the properties
-            // Apparently drag drop stops working if ran as administrator.. pfff
-
-            //var sh = new Shell32.Shell();
-            //var folder = sh.NameSpace(Path.GetDirectoryName(filename));
-            //var folderItem = folder.Items().Item(Path.GetFileName(filename));
-            //var link = (Shell32.ShellLinkObject)folderItem.GetLink;
-
-            var link = GetShortcutTarget(filename);
-
-            var o = new LinkItem
-            {
-                lnkPath = filename,
-                imgSrc = GetIcon(filename),
-                lnkTarget = link,
-                processes = new ObservableCollection<LinkProcess>()
-            };
-
-            RefreshItemProcessesAsync(o);
-
-            return o;
-        }
+        #region lnk hack
 
         // https://blez.wordpress.com/2013/02/18/get-file-shortcuts-target-with-c/
         // https://github.com/libyal/documentation/blob/main/reference/lnk_the_windows_shortcut_file_format.pdf
@@ -198,6 +171,29 @@ namespace PMTaskbar
             }
         }
 
+        #endregion
+
+        #region overrides
+
+        protected override void OnClosing(CancelEventArgs e)
+        {
+            settings.Top = this.Top;
+            settings.Left = this.Left;
+            settings.Height = this.Height;
+            settingsManager.SaveSettings(settings);
+
+            base.OnClosing(e);
+        }
+
+        protected override void OnSourceInitialized(EventArgs e)
+        {
+            IntPtr hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+            PInvoker.SetWindowLong(hwnd, PInvoker.GWL_STYLE, 
+                PInvoker.GetWindowLong(hwnd, PInvoker.GWL_STYLE) & (0xFFFFFFFF ^ PInvoker.WS_SYSMENU));
+
+            base.OnSourceInitialized(e);
+        }
+
         public ImageSource GetIcon(string fileName)
         {
             try
@@ -220,39 +216,6 @@ namespace PMTaskbar
             }
         }
 
-        [DllImport("user32.dll")]
-        static extern uint GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll")]
-        static extern int SetWindowLong(IntPtr hWnd, int nIndex, uint dwNewLong);
-
-        private const int GWL_STYLE = -16;
-
-        private const uint WS_SYSMENU = 0x80000;
-
-        #endregion
-
-        #region overrides
-
-        protected override void OnClosing(CancelEventArgs e)
-        {
-            settings.Top = this.Top;
-            settings.Left = this.Left;
-            settings.Height = this.Height;
-            settingsManager.SaveSettings(settings);
-
-            base.OnClosing(e);
-        }
-
-        protected override void OnSourceInitialized(EventArgs e)
-        {
-            IntPtr hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            SetWindowLong(hwnd, GWL_STYLE,
-                GetWindowLong(hwnd, GWL_STYLE) & (0xFFFFFFFF ^ WS_SYSMENU));
-
-            base.OnSourceInitialized(e);
-        }
-
         #endregion
 
         #region timer
@@ -273,8 +236,6 @@ namespace PMTaskbar
             });
 
             timer.Change(1000 - DateTime.Now.Millisecond, 1000);
-
-            //Text="{Binding Time, ElementName=clock, StringFormat=\{0:hh\\:mm\}, Mode=OneWay}"
         }
 
         #endregion
@@ -352,11 +313,11 @@ namespace PMTaskbar
             {
                 // TODO : see if more needs to be done to avoid any dependency between this process and the children.
                 Process.Start(new ProcessStartInfo { FileName = item.lnkPath, UseShellExecute = true });            
-                RefreshItemProcessesAsync(item);
+                RefreshItemWindowsAsync(item);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                // TODO
+                Trace.WriteLine($"Process start exception: {ex}");
                 SystemSounds.Exclamation.Play();
             }
 
@@ -414,40 +375,49 @@ namespace PMTaskbar
         // https://stackoverflow.com/questions/3556048/how-to-detect-win32-process-creation-termination-in-c/50315772#50315772
         // https://social.msdn.microsoft.com/Forums/vstudio/en-US/1c82bfb2-7c90-4b08-b34d-e64d1b9af006/wmi-event-watcher-query-causes-high-cpu-usage-for-wmiprvseexe-and-slowdown?forum=netfxbcl
 
-        void WatchProcesses()
+        LinkItem CreateItem(string filename, List<IntPtr> windows = null)
         {
-            Debug.WriteLine("WatchProcesses is starting.");
+            var link = GetShortcutTarget(filename);
 
-            var errors = 0;
-
-            var sw = Stopwatch.StartNew();
-
-            foreach (var item in settings.items)
+            var item = new LinkItem
             {
-                item.processes = new ObservableCollection<LinkProcess>(GetItemProcesses(item));
-                //Debug.WriteLine("  process {0} for link {1} is running.", process.Id, item.lnkPath);
-            }
+                lnkPath = filename,
+                imgSrc = GetIcon(filename),
+                lnkTarget = link,
+                name = Path.GetFileNameWithoutExtension(link),
+            };
 
-            Trace.WriteLine($"Processed in: {sw.Elapsed}, errors: {errors}");
+            item.windows = new ObservableCollection<LinkWindow>(GetItemWindows(item, windows));
+
+            return item;
         }
 
-        private List<LinkProcess> GetItemProcesses(LinkItem item)
+        private List<LinkWindow> GetItemWindows(LinkItem item, List<IntPtr> windows = null)
         {
-            var name = Path.GetFileNameWithoutExtension(item.lnkTarget);
-            var processes = Process.GetProcessesByName(name);
+            var processes = Process.GetProcessesByName(item.name);
+
+            var result = new List<LinkWindow>();
 
             if (processes == null || processes.Length == 0)
-                return new List<LinkProcess>();
-            
-            var result = new List<LinkProcess>();
+                return result;
+
+            // TODO: can you make it faster? (init links runs for 180ms and individual links for 5-45ms)
+
+            if (windows == null)
+                windows = PInvoker.GetTaskBarWindows();
+
+            var wp = windows.ToDictionary(k => k, v => (int)PInvoker.GetWindowThreadProcessId(v));
 
             foreach (var process in processes)
             {
                 try
                 {
+                    // TODO: this presumably filters out similar processes started from another source (not LNK)
+                    //       but not sure I need it
                     if (item.lnkTarget == process.MainModule?.FileName)
                     {
-                        result.Add(new LinkProcess(item) { process = process });
+                        foreach (var w in wp.Where(i => i.Value == process.Id))
+                            result.Add(new LinkWindow(item) { process = process, window = w.Key });
                     }
                 }
                 catch (Win32Exception ex)
@@ -482,7 +452,7 @@ namespace PMTaskbar
             if (itemMouseOver == null)
                 return;
 
-            RefreshItemProcessesAsync(itemMouseOver, true);
+            RefreshItemWindowsAsync(itemMouseOver, true);
         }
 
         private void ListViewItem_MouseLeave(object sender, MouseEventArgs e)
@@ -504,56 +474,38 @@ namespace PMTaskbar
             item);
         }
 
-
-        private void RefreshItemProcessesAsync(LinkItem item, bool showPopup = false)
+        private void RefreshItemWindowsAsync(LinkItem item, bool showPopup = false, List<IntPtr> windows = null, int delay = 400)
         {
             ThreadPool.QueueUserWorkItem(data =>
             {
-                Thread.Sleep(400);
+                Thread.Sleep(delay);
 
-                this.Dispatcher.BeginInvoke((Action<LinkItem>)((item) => RefreshItemProcesses(data.item, data.flag)), item);
+                this.Dispatcher.BeginInvoke((Action<LinkItem>)((item) => RefreshItemWindows(data.item, data.flag, data.w)), item);
             },
-            (item: item, flag: showPopup), 
+            (item: item, flag: showPopup, w: windows), 
             false);
         }
 
-        private void RefreshItemProcesses(LinkItem item, bool showPopup)
+        private void RefreshItemWindows(LinkItem item, bool showPopup, List<IntPtr> windows)
         {
             var sw = Stopwatch.StartNew();
 
             lock (item)
             {
-                var processes = new ObservableCollection<LinkProcess>(GetItemProcesses(item));
+                var itemWindows = GetItemWindows(item, windows);
 
-                // TODO: brute-froce, optimise?
-
-                var windows = WindowEnumerator.GetTaskBarWindows();
-                var wp = windows.ToDictionary(k => k, v => (int)WindowEnumerator.GetWindowThreadProcessId(v));
-
-                Debug.WriteLine("Item {0}, count {1}", item.lnkTarget, processes.Count);
-
-                foreach (var p in processes.ToList())
+                foreach (var p in item.windows.ToList())
                 {
-                    if (!wp.ContainsValue(p.process.Id))
-                        processes.Remove(p);
+                    if (!itemWindows.Contains(p))
+                        item.windows.Remove(p);
+                }
+                foreach (var p in itemWindows.ToList())
+                {
+                    if (!item.windows.Contains(p))
+                        item.windows.Add(p);
                 }
 
-                Debug.WriteLine("  after {0}", processes.Count);
-
-                //
-
-                foreach (var p in item.processes.ToList())
-                {
-                    if (!processes.Contains(p))
-                        item.processes.Remove(p);
-                }
-                foreach (var p in processes.ToList())
-                {
-                    if (!item.processes.Contains(p))
-                        item.processes.Add(p);
-                }
-
-                if (showPopup && item.processes.Count != 0)
+                if (showPopup && item.windows.Count != 0)
                     item.IsPopupShow = true;
             }
 
@@ -561,80 +513,42 @@ namespace PMTaskbar
             Debug.WriteLine("Refresh Item: {0}", sw.Elapsed);
         }
 
-        public void BringWindowToFront(Process process)
+        private void WindowRestoreButton_Click(object sender, RoutedEventArgs e)
         {
-            try
-            {
-                IntPtr handle = process.MainWindowHandle;
+            var item = (sender as Button).DataContext as LinkWindow;
 
-                Debug.WriteLine("Main handle: pid {0} window {1}", process.Id, handle);
-
-                //SetForegroundWindow(handle);
-                //ShowWindowAsync(handle, (int)SHOWWINDOW.RESTORE);
-
-                //return;
-
-                // How to find which window is real:
-                // https://stackoverflow.com/questions/7277366/why-does-enumwindows-return-more-windows-than-i-expected
-
-                //var children = WindowEnumerator.GetChildWindows(handle);
-                //var windows = WindowEnumerator.GetDesktopWindows();
-                var windows = WindowEnumerator.GetTaskBarWindows();
-
-                for (int i = 0; i < windows.Count; i++)
-                {
-                    var w = windows[i];
-
-                    uint pid;
-                    WindowEnumerator.GetWindowThreadProcessId(w, out pid);
-
-                    if (process.Id == pid)
-                    {
-                        //var v = WindowEnumerator.IsWindowVisible(w);
-                        //var v = WindowEnumerator.IsTaskBarWindow(w);
-
-                        //Debug.WriteLine("bingo: pid {0} window {1}, visible {2}", pid, w, v);
-
-                        //if (v)
-                        {
-                            WindowEnumerator.SetForegroundWindow(w);
-                            //Thread.Sleep(500);
-                            //ShowWindowAsync(w, (int)SHOWWINDOW.RESTORE);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-            }
-        }
-
-        private void ProcessButton_Click(object sender, RoutedEventArgs e)
-        {
-            var item = (sender as Button).DataContext as LinkProcess;
-
-            if (item == null || item.process == null)
+            if (item == null || item.window == IntPtr.Zero)
                 return;
 
-            BringWindowToFront(item.process);
+            PInvoker.SetForegroundWindow(item.window);
         }
 
-        private void CloseProcessButton_Click(object sender, RoutedEventArgs e)
+        private void WindowCloseButton_Click(object sender, RoutedEventArgs e)
         {
-            var item = (sender as Button).DataContext as LinkProcess;
+            var item = (sender as Button).DataContext as LinkWindow;
 
-            if (item == null || item.process == null)
+            if (item == null || item.window == IntPtr.Zero)
                 return;
 
-            item.process.CloseMainWindow();
+            //item.process.CloseMainWindow();
+            //var b = WindowEnumerator.DestroyWindow(item.window);
+            var b = PInvoker.PostMessage(item.window, (uint)PInvoker.WM.CLOSE, 0, 0);
 
-            RefreshItemProcessesAsync(item.parent);
-
+            RefreshItemWindowsAsync(item.parent);
         }
 
         #endregion
     }
 }
+
+// NB: needs to be run as administrator to get the properties
+// Apparently drag drop stops working if ran as administrator.. pfff
+
+//var sh = new Shell32.Shell();
+//var folder = sh.NameSpace(Path.GetDirectoryName(filename));
+//var folderItem = folder.Items().Item(Path.GetFileName(filename));
+//var link = (Shell32.ShellLinkObject)folderItem.GetLink;
+
 
 // NB: WMI timing is x10 of the .NET GetProcesses
 

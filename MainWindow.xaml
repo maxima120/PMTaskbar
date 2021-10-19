@@ -275,7 +275,7 @@
                     <StackPanel HorizontalAlignment="Center">
                         <Image Source="{Binding imgSrc}" Margin="5" />
                         <Popup PlacementTarget="{Binding .}" Placement="Right" IsOpen="{Binding IsPopupShow}">
-                            <ListView ItemsSource="{Binding processes}" SelectionMode="Single" Background="DimGray" BorderThickness="1" BorderBrush="Black" HorizontalContentAlignment="Stretch">
+                            <ListView ItemsSource="{Binding windows}" SelectionMode="Single" Background="DimGray" BorderThickness="1" BorderBrush="Black" HorizontalContentAlignment="Stretch">
                                 <ListBox.ItemTemplate>
                                     <DataTemplate>
                                         <Border Background="DimGray" CornerRadius="4" ClipToBounds="False">
@@ -285,7 +285,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 
-                                                <Button Height="33" HorizontalAlignment="Stretch" Click="ProcessButton_Click" Padding="20,0" Foreground="White" Background="Transparent" BorderThickness="0">
+                                                <Button Height="33" HorizontalAlignment="Stretch" Click="WindowRestoreButton_Click" Padding="20,0" Foreground="White" Background="Transparent" BorderThickness="0">
                                                     <TextBlock VerticalAlignment="Center" HorizontalAlignment="Center">
                                                         <TextBlock.Text>
                                                             <MultiBinding StringFormat="{}{0} : {1}">
@@ -296,7 +296,7 @@
                                                     </TextBlock>
                                                 </Button>
 
-                                                <Button Width="30" Click="CloseProcessButton_Click" Grid.Column="1" Margin="2,2,-2,2">
+                                                <Button Width="30" Click="WindowCloseButton_Click" Grid.Column="1" Margin="2,2,-2,2">
                                                     <Path Data="M0,0 L10,10 M10,0 L0,10" Stroke="White" />
                                                 </Button>
 

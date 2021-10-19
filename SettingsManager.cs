@@ -100,6 +100,8 @@ namespace PMTaskbar
             isPopupShow = false;
         }
 
+        public string name { get; set; }
+
         /// <summary>
         /// .lnk icon
         /// </summary>
@@ -123,7 +125,7 @@ namespace PMTaskbar
         /// <summary>
         /// running processes of that target
         /// </summary>
-        public ObservableCollection<LinkProcess> processes { get; set; }
+        public ObservableCollection<LinkWindow> windows { get; set; }
 
         public event PropertyChangedEventHandler PropertyChanged;
         void OnPropertyChanged(string name)
@@ -133,13 +135,14 @@ namespace PMTaskbar
         }
     }
 
-    public class LinkProcess
+    public class LinkWindow
     {
-        public LinkProcess(LinkItem parent)
+        public LinkWindow(LinkItem parent)
         {
             this.parent = parent;
         }
-
+        
+        public IntPtr window { get; set; }
         public Process process { get; set; }
         public LinkItem parent { get; set; }
     }
