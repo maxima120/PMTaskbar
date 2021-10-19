@@ -1229,6 +1229,16 @@ namespace PMTaskbar
             }
         }
 
+        public static string GetWindowTitle(IntPtr hWnd)
+        {
+            // Allocate correct string length first
+            //int length = GetWindowTextLength(hWnd);
+            var length = 250;
+            StringBuilder sb = new StringBuilder(length + 1);
+            GetWindowText(hWnd, sb, sb.Capacity);
+            return sb.ToString();
+        }
+
         public static uint GetWindowThreadProcessId(IntPtr hWnd)
         {
             uint pid;

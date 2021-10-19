@@ -150,6 +150,9 @@ namespace PMTaskbar
         private BitmapSource imgSrc;
         public BitmapSource ImgSrc { get => imgSrc; set { if (imgSrc == value) return; imgSrc = value; OnPropertyChanged("ImgSrc"); } }
 
+        private string title;
+        public string Title { get => title; set { title = value; OnPropertyChanged("Title"); } }
+
         public event PropertyChangedEventHandler PropertyChanged;
         void OnPropertyChanged(string name)
         {

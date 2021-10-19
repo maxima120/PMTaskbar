@@ -508,6 +508,7 @@ namespace PMTaskbar
                 {
                     if (!item.Windows.Contains(w))
                     {
+                        w.Title = PInvoker.GetWindowTitle(w.Window);
                         w.ImgSrc = PInvoker.GetWindowThumb(w.Window, 80, 80);
                         item.Windows.Add(w);
                     }
