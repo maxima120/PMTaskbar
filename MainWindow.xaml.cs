@@ -30,8 +30,6 @@ namespace PMTaskbar
         private readonly SettingsManager<UserSettings> settingsManager;
         private readonly UserSettings settings;
 
-        Timer timer;
-
         public MainWindow()
         {
             InitializeComponent();
@@ -40,8 +38,6 @@ namespace PMTaskbar
             settings = settingsManager.LoadSettings();
 
             ProcessSettings(settings);
-
-            StartWallClock();
 
             var v = this.GetType().Assembly.GetName().Version.ToString();
             Trace.WriteLine("PMT v." + v);
@@ -73,7 +69,7 @@ namespace PMTaskbar
 
             Trace.WriteLine($"Init links processed in: {sw.Elapsed}");
 
-            lst.DataContext = settings;
+            this.DataContext = settings;
         }
 
         #endregion
@@ -217,28 +213,6 @@ namespace PMTaskbar
                 PInvoker.GetWindowLong(hwnd, PInvoker.GWL_STYLE) & (0xFFFFFFFF ^ PInvoker.WS_SYSMENU));
 
             base.OnSourceInitialized(e);
-        }
-
-        #endregion
-
-        #region timer
-
-        private void StartWallClock()
-        {
-            this.TimeText.Text = DateTime.Now.ToString("HH:mm");
-            this.WeekdayText.Text = DateTime.Now.ToString("ddd");
-
-            timer = new Timer((o) =>
-            {
-                this.Dispatcher.BeginInvoke((Action)(() =>
-                {
-                    this.TimeText.Text = DateTime.Now.ToString("HH:mm");
-                    this.WeekdayText.Text = DateTime.Now.ToString("ddd");
-                })
-                );
-            });
-
-            timer.Change(1000 - DateTime.Now.Millisecond, 1000);
         }
 
         #endregion

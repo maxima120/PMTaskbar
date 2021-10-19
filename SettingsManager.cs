@@ -89,6 +89,8 @@ namespace PMTaskbar
         public double Top { get; set; }
         public double Left { get; set; }
         public double Height { get; set; }
+        public bool PanelShowSeconds { get; set; }
+        public bool PanelShowDate { get; set; }
     }
 
     /// <summary>
