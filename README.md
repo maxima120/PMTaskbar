@@ -20,4 +20,4 @@ Close this by right-click on the actual Windows 11 taksbar and "Close all window
 In v 1.1 you can manipulate windows opened from the pinned links. Hover mouse over a link and you would see all processes spawned from it.
 Click on a process brings the windows to front, click on X button closes it. 
 
-In v 1.2 it mimics the Windows taskbar by displaying windows thumbnails and title on mouse hover over.
+In v 1.1.2 it mimics the Windows taskbar by displaying windows thumbnails and title on mouse hover over.
