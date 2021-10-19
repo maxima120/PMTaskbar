@@ -10,7 +10,7 @@
     <StackPanel>
         <TextBlock x:Name="TimeText" HorizontalAlignment="Center" MouseLeftButtonDown="TimeText_MouseLeftButtonDown" Margin="0,0,0,2" />
         <Border x:Name="DateBorder" Padding="0,4" Background="#3d3d3d" Visibility="Collapsed" MouseLeftButtonDown="DateText_MouseLeftButtonDown">
-            <TextBlock x:Name="DateText" Foreground="White" HorizontalAlignment="Center"/>
+            <TextBlock x:Name="DateText" Foreground="White" HorizontalAlignment="Center" FontWeight="Normal" Margin="0,1,0,0"/>
         </Border>
         <TextBlock x:Name="WeekdayText" HorizontalAlignment="Center" MouseLeftButtonDown="DateText_MouseLeftButtonDown" Margin="0,2,0,0"/>
     </StackPanel>
