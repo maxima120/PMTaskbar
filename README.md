@@ -21,8 +21,7 @@ In v 1.1 you can manipulate windows opened from the pinned links. Hover mouse ov
 Click on a process brings the windows to front, click on X button closes it. 
 
 In v 1.1.2 it mimics the Windows taskbar by displaying windows thumbnails and title on mouse hover over.
+You can chose to display time with or without seconds (click on the time), to display date and weekday or just weekday (click on the date)
 
-In v 1.1.2.2 you can chose to display time with or without seconds (click on the time), to display date and weekday or just weekday (click on the date)
-
-![image](https://user-images.githubusercontent.com/10121753/137952069-495577dc-baba-451e-b0cb-70dad13d7796.png)
+![image](https://user-images.githubusercontent.com/10121753/137954971-7825335c-6f38-42a3-a2bf-a8f2c8e6d7e0.png)
 
