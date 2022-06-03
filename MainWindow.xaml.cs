@@ -37,25 +37,17 @@ namespace PMTaskbar
             settingsManager = new SettingsManager<UserSettings>("pmt.settings.json");
             settings = settingsManager.LoadSettings();
 
-            ProcessSettings(settings);
+            ApplySettings(settings);
 
             var v = this.GetType().Assembly.GetName().Version.ToString();
             Trace.WriteLine("PMT v." + v);
-
-            // Useful - extract default template without mucking with Blend
-
-            //var str = new StringBuilder();
-            //using (var writer = new StringWriter(str))
-            //    XamlWriter.Save(abc.Template, writer);
-            //Debug.Write(str);
         }
 
-        private void ProcessSettings(UserSettings settings)
+        private void ApplySettings(UserSettings settings)
         {
             this.Top = settings.Top;
             this.Left = settings.Left;
             this.Height = settings.Height;
-
             Debug.WriteLine("Init links is starting.");
 
             var sw = Stopwatch.StartNew();
@@ -104,7 +96,7 @@ namespace PMTaskbar
         // https://github.com/libyal/documentation/blob/main/reference/lnk_the_windows_shortcut_file_format.pdf
         // https://github.com/libyal/liblnk/blob/main/documentation/Windows%20Shortcut%20File%20(LNK)%20format.asciidoc
 
-        // TODO: works for user-created links but not for the "system" RDP link
+        // TODO: doesnt work with RDP links to concrete servers
         private string GetShortcutTarget(string filename)
         {
             try
@@ -221,6 +213,12 @@ namespace PMTaskbar
 
         private void ListView_Drop(object sender, DragEventArgs e)
         {
+            if (e.Data.GetDataPresent("System.Windows.Controls.ListViewItem"))
+            {
+                // this has been processed in the item drop handler
+                return;
+            }
+
             if (!e.Effects.HasFlag(DragDropEffects.Link))
             {
                 SystemSounds.Exclamation.Play();
@@ -265,7 +263,6 @@ namespace PMTaskbar
                     continue;
                 }
 
-                settings.Links.Add(s);
                 settings.Items.Add(CreateItem(s));
                 settingsManager.SaveSettings(settings);
             }
@@ -306,6 +303,9 @@ namespace PMTaskbar
                 return;
 
             this.Height -= 60;
+
+            settings.Height = this.Height;
+            settingsManager.SaveSettings(settings);
         }
 
         private void DnButton_Click(object sender, RoutedEventArgs e)
@@ -314,6 +314,9 @@ namespace PMTaskbar
                 return;
 
             this.Height += 60;
+
+            settings.Height = this.Height;
+            settingsManager.SaveSettings(settings);
         }
 
         private void UnpinMenuItem_Click(object sender, RoutedEventArgs e)
@@ -328,11 +331,8 @@ namespace PMTaskbar
 
             try
             {
-                settings.Links.Remove(item.LnkPath);
                 settings.Items.Remove(item);
                 settingsManager.SaveSettings(settings);
-
-                lst.Items.Remove(item);
             }
             catch (Exception ex)
             {
@@ -517,6 +517,48 @@ namespace PMTaskbar
             var b = PInvoker.PostMessage(item.Window, (uint)PInvoker.WM.CLOSE, 0, 0);
 
             RefreshItemWindowsAsync(item.Parent);
+        }
+
+        #endregion
+
+        #region item rearrange
+
+        private void ListView_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            var point = e.GetPosition(this);
+            var item = sender as ListViewItem;
+            if (item == null)
+                return;
+
+            DragDrop.DoDragDrop(lst, item, DragDropEffects.Move);
+        }
+        private void ListItem_Drop(object sender, DragEventArgs e)
+        {
+            try
+            {
+                var dst = sender as ListViewItem;
+                var dstData = dst?.DataContext as LinkItem;
+
+                var dropData = e.Data?.GetData("System.Windows.Controls.ListViewItem");
+                var src = dropData as ListViewItem;
+                var srcData = src?.DataContext as LinkItem;
+
+                if (dstData != null && srcData != null && srcData != dstData)
+                {
+                    var dstIdx = settings.Items.IndexOf(dstData);
+                    var srcIdx = settings.Items.IndexOf(srcData);
+
+                    if(dstIdx != -1 && srcIdx != -1)
+                    {
+                        settings.Items.RemoveAt(srcIdx);
+                        settings.Items.Insert(dstIdx, srcData);
+                        settingsManager.SaveSettings(settings);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+            }
         }
 
         #endregion

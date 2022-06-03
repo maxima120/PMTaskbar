@@ -15,7 +15,7 @@ using System.Windows.Media.Imaging;
 
 namespace PMTaskbar
 {
-    public class SettingsManager<T> where T : class, new()
+    public class SettingsManager<T> where T : IUserSettings, new()
     {
         private readonly string filePath;
 
@@ -43,7 +43,9 @@ namespace PMTaskbar
             try
             {
                 if (File.Exists(filePath))
+                {
                     return JsonSerializer.Deserialize<T>(File.ReadAllText(filePath));
+                }
             }
             catch (Exception)
             {
@@ -57,9 +59,9 @@ namespace PMTaskbar
         {
             try
             {
+                settings.Unload();
                 string json = JsonSerializer.Serialize(settings);
                 File.WriteAllText(filePath, json);
-
             }
             catch (Exception)
             {
@@ -68,10 +70,14 @@ namespace PMTaskbar
         }
     }
 
+    public interface IUserSettings
+    {
+        void Unload();
+    }
     /// <summary>
     /// items holder for serialization
     /// </summary>
-    public class UserSettings
+    public class UserSettings : IUserSettings
     {
         public UserSettings()
         {
@@ -91,6 +97,11 @@ namespace PMTaskbar
         public double Height { get; set; }
         public bool PanelShowSeconds { get; set; }
         public bool PanelShowDate { get; set; }
+
+        public void Unload()
+        {
+            Links = Items.Select(i => i.LnkPath).ToList();
+        }
     }
 
     /// <summary>
